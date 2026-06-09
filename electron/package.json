@@ -1,0 +1,22 @@
+{
+  "name": "relay-link-desktop",
+  "version": "1.0.0",
+  "description": "macOS Desktop Utility for clipboard sync and Virtual KVM sharing",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "dependencies": {
+    "electron": "^30.0.0",
+    "ws": "^8.16.0"
+  },
+  "keywords": [
+    "kvm",
+    "clipboard",
+    "macos",
+    "android",
+    "mouse-sharing"
+  ],
+  "author": "Relay Link Team",
+  "license": "Apache-2.0"
+}

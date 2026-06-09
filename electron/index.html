@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Relay Link - macOS Controller</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      background-color: #0A0A0C;
+      color: #E0E1E5;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      -webkit-app-region: drag;
+      user-select: none;
+    }
+    input, select, button {
+      -webkit-app-region: no-drag;
+    }
+    .custom-scroll::-webkit-scrollbar {
+      width: 4px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+      background: #141417;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #2D2D33;
+      border-radius: 2px;
+    }
+  </style>
+</head>
+<body class="h-full flex flex-col overflow-hidden">
+  <!-- Titlebar for macOS Native look -->
+  <header class="h-14 border-b border-[#242428] flex items-center justify-between pl-20 pr-6 bg-[#0F0F12]">
+    <div class="flex items-center gap-2">
+      <span class="text-sm font-semibold tracking-tight">Relay Link <span class="text-blue-500 font-mono text-xs ml-1">Desktop Host</span></span>
+    </div>
+    <div class="flex items-center gap-4">
+      <div class="flex items-center gap-1.5">
+        <div id="statusDot" class="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
+        <span id="statusText" class="text-[10px] font-mono text-green-500 uppercase tracking-widest">Active</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Content Workspace -->
+  <main class="flex-1 grid grid-cols-12 overflow-hidden">
+    <!-- Sidebar: Controls -->
+    <aside class="col-span-4 border-r border-[#242428] bg-[#0C0C0E] p-5 flex flex-col gap-6">
+      <section class="space-y-4">
+        <h3 class="text-[10px] font-bold text-[#8E9299] uppercase tracking-widest">Configuration</h3>
+        
+        <div class="space-y-3">
+          <div>
+            <label class="text-xs text-[#8E9299] mb-1 block">Listen Port</label>
+            <input type="number" id="portInput" value="8765" min="1024" max="65535" class="w-full bg-[#1A1A1E] border border-[#2D2D33] rounded px-3 py-1.5 text-sm font-mono text-white focus:border-blue-500 outline-none">
+          </div>
+
+          <div>
+            <label class="text-xs text-[#8E9299] mb-1 block">Screen Edge Orientation</label>
+            <select id="edgeSelect" class="w-full bg-[#1A1A1E] border border-[#2D2D33] rounded px-3 py-1.5 text-xs text-white focus:border-blue-500 outline-none cursor-pointer">
+              <option value="Right">Right Edge (Tablet to Right)</option>
+              <option value="Left">Left Edge (Tablet to Left)</option>
+              <option value="Top">Top Edge (Tablet above Mac)</option>
+              <option value="Bottom">Bottom Edge (Tablet below Mac)</option>
+            </select>
+          </div>
+
+          <div class="flex items-center justify-between py-2 border-t border-[#1C1C22]">
+            <span class="text-xs text-[#E0E1E5]">KVM Sharing Engine</span>
+            <button id="kvmToggle" class="w-10 h-5 bg-blue-600 rounded-full relative transition-colors">
+              <div id="kvmIndicator" class="absolute right-0.5 top-0.5 w-4 h-4 bg-white rounded-full transition-all"></div>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Connection Summary -->
+      <section class="mt-auto bg-[#141417] p-3 rounded-lg border border-[#242428]">
+        <div class="text-[10px] text-[#8E9299] uppercase tracking-wider mb-2">Host Machine Info</div>
+        <div class="space-y-1 text-xs">
+          <div class="flex justify-between"><span class="text-[#8E9299]">Local IP:</span><span id="localIp" class="font-mono text-white">...</span></div>
+          <div class="flex justify-between"><span class="text-[#8E9299]">Active Clients:</span><span id="activeClientsCount" class="font-bold text-green-400">0</span></div>
+        </div>
+      </section>
+    </aside>
+
+    <!-- Console & Logs Buffer -->
+    <section class="col-span-8 bg-[#09090B] p-5 flex flex-col overflow-hidden">
+      <div class="flex items-center justify-between mb-3 border-b border-[#242428] pb-2">
+        <h3 class="text-[10px] font-bold text-[#8E9299] uppercase tracking-widest">Protocol Logs Stream</h3>
+        <button id="clearLogsBtn" class="text-[10px] text-blue-500 hover:underline">Clear Stream</button>
+      </div>
+
+      <!-- Logs Shell list -->
+      <div id="logsContainer" class="flex-1 overflow-y-auto font-mono text-[11px] text-[#A0A1A5] space-y-2 p-3 bg-[#0A0A0C] border border-[#1E1E22] rounded custom-scroll">
+        <div class="text-blue-500 font-bold">[SYSTEM] Relay Link client GUI initialized. Waiting for IPC handshake...</div>
+      </div>
+
+      <!-- Clipboard Status display -->
+      <div class="mt-4 p-3 bg-[#131317] border border-[#242428] rounded">
+        <h4 class="text-[10px] font-bold text-[#8E9299] uppercase tracking-wider mb-1">Clipboard Buffer</h4>
+        <div class="flex items-center justify-between">
+          <span id="clipboardPreview" class="text-xs text-zinc-400 shrink truncate max-w-[80%] italic">No active content in buffer</span>
+          <span class="text-[10px] font-mono bg-blue-900/40 text-blue-400 border border-blue-800/40 px-1.5 py-0.5 rounded">Synced</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Electron Controller JavaScript IPC -->
+  <script>
+    const { ipcRenderer } = require('electron');
+
+    const portInput = document.getElementById('portInput');
+    const edgeSelect = document.getElementById('edgeSelect');
+    const kvmToggle = document.getElementById('kvmToggle');
+    const kvmIndicator = document.getElementById('kvmIndicator');
+    const statusDot = document.getElementById('statusDot');
+    const statusText = document.getElementById('statusText');
+    const localIp = document.getElementById('localIp');
+    const activeClientsCount = document.getElementById('activeClientsCount');
+    const logsContainer = document.getElementById('logsContainer');
+    const clearLogsBtn = document.getElementById('clearLogsBtn');
+    const clipboardPreview = document.getElementById('clipboardPreview');
+
+    let kvmState = false;
+
+    // Change Port
+    portInput.addEventListener('change', () => {
+      ipcRenderer.send('change-port', portInput.value);
+    });
+
+    // Change Screen Edge
+    edgeSelect.addEventListener('change', () => {
+      ipcRenderer.send('change-edge', edgeSelect.value);
+    });
+
+    // Toggle KVM
+    kvmToggle.addEventListener('click', () => {
+      kvmState = !kvmState;
+      updateKvmBtn(kvmState);
+      ipcRenderer.send('toggle-kvm', kvmState);
+    });
+
+    function updateKvmBtn(enabled) {
+      if (enabled) {
+        kvmToggle.classList.replace('bg-zinc-700', 'bg-blue-600');
+        kvmIndicator.style.left = 'auto';
+        kvmIndicator.style.right = '2px';
+      } else {
+        kvmToggle.classList.add('bg-zinc-700');
+        kvmToggle.classList.remove('bg-blue-600');
+        kvmIndicator.style.right = 'auto';
+        kvmIndicator.style.left = '2px';
+      }
+    }
+    updateKvmBtn(false);
+
+    // Clear Logs
+    clearLogsBtn.addEventListener('click', () => {
+      logsContainer.innerHTML = '<div class="text-[#8E9299] italic">[Console Cleared]</div>';
+    });
+
+    // Receive state from Main process
+    ipcRenderer.on('state-update', (event, state) => {
+      portInput.value = state.port;
+      edgeSelect.value = state.shareEdge;
+      kvmState = state.isKvmEnabled;
+      updateKvmBtn(state.isKvmEnabled);
+      
+      localIp.innerText = state.ipAddress;
+      activeClientsCount.innerText = state.connectionsCount;
+
+      if (state.isServerOnline) {
+        statusDot.className = "w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse";
+        statusText.innerText = "Listening";
+        statusText.className = "text-[10px] font-mono text-green-500 uppercase tracking-widest";
+      } else {
+        statusDot.className = "w-2 h-2 rounded-full bg-red-500";
+        statusText.innerText = "Offline";
+        statusText.className = "text-[10px] font-mono text-red-500 uppercase tracking-widest";
+      }
+    });
+
+    // Receive background logs from Main process
+    ipcRenderer.on('new-log', (event, log) => {
+      const row = document.createElement('div');
+      row.className = "hover:bg-white/5 py-0.5 rounded px-1 transition-colors";
+      row.innerHTML = `<span class="text-zinc-600">[${log.timestamp}]</span> <span class="text-[#E0E1E5]">${log.text}</span>`;
+      logsContainer.appendChild(row);
+      logsContainer.scrollTop = logsContainer.scrollHeight;
+    });
+  </script>
+</body>
+</html>

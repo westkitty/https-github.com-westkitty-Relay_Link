@@ -1,0 +1,6 @@
+{
+  "name": "Relay Link",
+  "description": "Cross-platform clipboard synchronization and mouse-pointer sharing (Virtual KVM) service between macOS and Android.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
